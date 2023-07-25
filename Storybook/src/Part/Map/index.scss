@@ -1,0 +1,52 @@
+.sc-map {
+  height: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+
+  .m-info {
+    display: flex;
+    flex-direction: column;
+
+    &>p {
+      display: flex;
+      flex-direction: column;
+
+      &>span {
+        font-size: 1.2rem;
+        color: #333;
+        font-weight: bold;
+        letter-spacing: 1px;
+      }
+    }
+
+    h1 {
+      color: var(--clr-main);
+      font-size: 18px;
+      border-bottom: 1px dashed #ccc;
+      padding-bottom: 10px;
+      letter-spacing: 1.6px;
+    }
+  }
+
+
+  .gm-style  {
+    .gm-style-iw-c {
+      max-width: 540px !important;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .gm-style-iw-d {
+      margin:0!important;
+      overflow: hidden;
+    }
+
+    .gm-style-iw>button {
+      display: none!important;
+    }
+  }
+}
