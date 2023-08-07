@@ -11,7 +11,7 @@ const Template01 = (args) => {
   return <Step01 {...args} />;
 };
 
-export const StepType01 = Template01.bind({});
-StepType01.args = {
+export const StepTailwind01 = Template01.bind({});
+StepTailwind01.args = {
   ...data,
 };
