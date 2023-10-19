@@ -31,3 +31,316 @@
 7. 此时中间人就获得了会话秘钥，并取得双方新人，双方的通讯都可以由中间人代理
 
 出现这样问题的关键在第四步，客户端轻易信任了伪造的服务器证书
+
+## css
+
+### 颜色算法
+
+```css
+background-color: mix(@clr-main, #fff, 20%);
+```
+
+### 限制文字
+
+#### 单行
+
+```less
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+```
+
+#### 多行
+
+```less
+display: -webkit-box;
+-webkit-box-orient: vertical;
+-webkit-line-clamp: 2;
+overflow: hidden;
+```
+
+### input 框透明
+
+```plain
+                .ant-input-affix-wrapper {
+                    background-color: rgba(255, 255, 255, 0.28) !important;
+                    .ant-input {
+                        box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0) inset !important;
+                        background-color: rgba(255, 255, 255, 0) !important;
+                    }
+                    input:-internal-autofill-previewed,
+                    input:-internal-autofill-selected {
+                        background-color: rgba(255, 255, 255, 0) !important;
+                        transition: background-color 5000s ease-in-out 0s !important;
+                    }
+                }
+```
+
+### 删除滚动条
+
+```plain
+html ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    background-color: transparent;
+}
+```
+
+### 从第二个元素开始
+
+```less
+.pieLegend:nth-child(n + 2) {
+  //n+2表示从第二个开始
+  border-top: 1px dashed rgba(51, 51, 51, 0.08);
+}
+```
+
+### 设置解析空格、\n、\t
+
+```css
+设置white-space
+normal  默认。空白会被浏览器忽略。
+pre   空白会被浏览器保留。其行为方式类似 HTML 中的
+<pre>标签。
+nowrap  文本不会换行，文本会在在同一行上继续，直到遇到<br>标签为止。
+pre-wrap  保留空白符序列，但是正常地进行换行。
+pre-line  合并空白符序列，但是保留换行符。
+inherit   规定应该从父元素继承 white-space 属性的值。
+```
+
+## JS
+
+### 打印文件流
+
+```javascript
+const blob = new Blob([res], {
+  type: 'application/pdf',
+})
+const fileName = `巡检报告.pdf`
+const link = document.createElement('a')
+// 新建一个a标签，用于下载,并设置下载地址,文件名为fileName
+link.href = window.URL.createObjectURL(blob)
+
+link.download = fileName
+document.body.appendChild(link)
+
+link.click()
+window.URL.revokeObjectURL(link.href)
+document.body.removeChild(link)
+```
+
+### token
+
+以下是使用 React 和 Express 实现登录加密 token 的一般步骤：
+
+1. 在 React 中，创建一个登录页面，该页面应该包含一个表单，用户可以在其中输入用户名和密码。当用户提交表单时，应该将这些凭据发送到 Express 服务器进行验证。
+2. 在 Express 中，创建一个路由处理程序，该处理程序将接收来自 React 的 POST 请求，并使用 Passport.js 库中的 LocalStrategy 进行身份验证。如果凭据有效，则应该生成一个 JWT 令牌并将其返回给 React。
+3. 在 React 中，通过将 JWT 令牌存储在本地存储中来保持用户会话。每次用户在 React 中进行受保护的操作时，应该将 JWT 令牌包含在请求中，以便 Express 服务器可以验证用户是否已经登录。
+4. 在 Express 中，创建一个中间件函数来验证 JWT 令牌。该函数应该用于任何需要身份验证的路由处理程序中，并且如果 JWT 令牌无效，则应该返回 401 未经授权的错误。
+
+下面是一个使用 React 和 Express 实现登录加密 token 的示例代码：
+
+React 代码：
+
+```javascript
+import React, { useState } from 'react'
+import axios from 'axios'
+
+function Login() {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const response = await axios.post('/api/login', {
+      username,
+      password,
+    })
+    localStorage.setItem('token', response.data.token)
+    // redirect to protected page
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button type="submit">Login</button>
+    </form>
+  )
+}
+
+export default Login
+```
+
+Express 代码：
+
+```javascript
+const express = require('express')
+const bodyParser = require('body-parser')
+const passport = require('passport')
+const LocalStrategy = require('passport-local').Strategy
+const jwt = require('jsonwebtoken')
+
+const app = express()
+app.use(bodyParser.json())
+
+passport.use(
+  new LocalStrategy(async (username, password, done) => {
+    // validate username and password
+    if (username === 'admin' && password === 'password') {
+      const user = { id: 1, username: 'admin' }
+      done(null, user)
+    } else {
+      done(null, false)
+    }
+  })
+)
+
+app.post('/api/login', (req, res, next) => {
+  passport.authenticate(
+    'local',
+    { session: false },
+    async (err, user, info) => {
+      if (err || !user) {
+        return res.status(401).json({
+          message: 'Invalid credentials',
+        })
+      }
+      const token = jwt.sign({ id: user.id }, 'secret')
+      return res.json({ token })
+    }
+  )(req, res, next)
+})
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+  if (token == null) {
+    return res.sendStatus(401)
+  }
+  jwt.verify(token, 'secret', (err, user) => {
+    if (err) {
+      return res.sendStatus(401)
+    }
+    req.user = user
+    next()
+  })
+}
+
+app.get('/api/protected', authenticateToken, (req, res) => {
+  res.json({ message: 'Protected page' })
+})
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000')
+})
+```
+
+以上是一个简单的使用 React 和 Express 实现登录加密 token 的示例代码，该示例代码仅用于演示目的，实际应用中可能需要进行更多的安全性和错误处理。
+
+### 全屏
+
+```javascript
+const toFullScreen = (e) => {
+  const fullScreenEle = e.currentTarget.parentNode.parentNode.parentNode
+  // 如果是全屏状态，退出全屏
+  if (document.fullscreenElement) {
+    document.exitFullscreen()
+    return
+  }
+  fullScreenEle.requestFullscreen()
+}
+```
+
+### 取色器
+
+```javascript
+const eyeDropper = new EyeDropper()
+const result = await eyeDropper.open()
+```
+
+### 页面可见度 API(Page Visibility)
+
+```jsx
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+  }
+})
+```
+
+### 获得响应流
+
+[使用可读流 - Web API 接口参考 | MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Using_readable_streams)
+
+<br/>
+
+### 移动端避免 click 和 touch 事件同时触发
+
+当我们在目标元素同时绑定 touchstart 和 click 事件时，在 touchstart 事件回调函数中使用该方法，可以阻止后续 click 事件的发生。
+
+<br/>
+
+## AntV
+
+### 柱状图
+
+##### 垂直坐标刻度长度
+
+```jsx
+yAxis:{
+    tickInterval:
+                Math.floor(
+                    Math.max(...usedRegistry.map((item) => item.itemNum)) /
+                        5 /
+                        10
+                ) * 10, //计算长度
+      // tickInterval:1,  //固定长度
+    grid:null
+}
+```
+
+##### 限制柱子宽度
+
+```jsx
+maxColumnWidth: 50,
+```
+
+##### 柱状图中 tooltip 以 name：value 格式展示
+
+```plain
+xField: 'itemName',
+yField: 'itemNum',
+seriesField: 'itemName',
+tooltip: {
+    showTitle:false
+},
+legend: false,
+```
+
+### tooltip
+
+##### 不显示标题
+
+```plain
+tooltip: {
+    showTitle:false
+  },
+```
+
+### legend
+
+##### 不显示图例
+
+```plain
+legend: false,
+```
