@@ -1,4 +1,147 @@
-记录一些遇到的问题
+**记录一些遇到的问题**
+
+## 单点登录 SSO
+
+使用场景是在公司系统逐渐增加时，为了简化用户在多个系统间的登录流程，实现：**一处登录，处处登录；一处注销，处处注销；**
+
+实现思路是将登录注册模块分离出单独的系统，每当用户需要在某个系统（以 A 系统为例）登录时，跳转到这个登录系统（SSO 系统），检测登录状态。
+
+- 如果是未登录就在这个系统进行登录，登录成功后返回一个`登录凭证`
+- 如果是已登录就返回一个`登录凭证`
+- 携带这个登录凭证返回 A 系统
+
+为了防止 15 天过期的 token，用户 14 天能自动登录，15 天就要重新登录这样的不良体验，token 应该对于活跃用户及时刷新。
+
+## 基于非对称加密实现限制登录
+
+场景是在限制特定登录环境时，使用特定环境传入私钥进行非对称加密传输 cipher
+
+1. 客户端初次登录时携带`公钥`
+2. 服务端生成`会话秘钥`，使用公钥加密，传回给客户端
+3. 客户端用私钥解密，取出会话秘钥
+4. 再次发送登录请求，携带会话秘钥，登录成功
+
+## PostMessage 跨窗口通信
+
+PostMessage 是 HTML5 中提供的一种跨窗口通信的机制，它允许在不同窗口、标签页或 iframe 之间传递消息。
+
+PostMessage 使用步骤：
+
+1. 发送消息：在发送消息的窗口中调用`window.postMessage`方法，将消息和目标窗口的源(origin)传递给它。源可以是一个具体的域名，也可以是通配符"\*"，表示不限制源。示例代码如下：
+
+```javascript
+var targetWindow = window.open('https://www.example.com')
+targetWindow.postMessage('Hello!', 'https://www.example.com')
+```
+
+在这个例子中，我们通过`window.open`方法打开了一个新窗口，并将消息"Hello!"发送给这个窗口。源被设置为`https://www.example.com`。
+
+2. 接收消息：在接收消息的窗口中，通过监听`message`事件来获取消息。在事件处理函数中，可以通过`event.data`获取消息的内容，通过`event.origin`获取消息的发送源。示例代码如下：
+
+```javascript
+window.addEventListener('message', function (event) {
+  if (event.origin === 'https://www.example.com') {
+    console.log('Received message:', event.data)
+  }
+})
+```
+
+在这个例子中，我们通过`addEventListener`方法监听了`message`事件，并在事件处理函数中打印出接收到的消息。通过检查`event.origin`，我们可以确保只接收来自指定源的消息。
+
+需要注意的是，PostMessage 的安全性需要特别注意。由于 PostMessage 允许不同源之间的通信，恶意网站可能会滥用它来进行攻击。因此，在使用 PostMessage 时，请确保验证消息的源和内容，以避免安全风险。
+
+PostMessage 的应用场景包括但不限于以下几种情况：
+
+- 在父窗口和子窗口之间进行通信。
+- 在不同域名之间进行通信。
+- 在主页面和嵌套的 iframe 之间进行通信。
+
+通过使用 PostMessage，我们可以实现跨窗口的数据传递和通信，从而在前端应用中实现更灵活、交互性更强的功能。
+
+## js 隔离方案 window 工厂
+
+在前端开发中，"window 工厂"是一种用于隔离 JavaScript 代码的设计模式。它通常被用于避免全局命名空间的污染和冲突。
+
+"window 工厂"模式的基本思想是将所有的代码封装在一个函数内部，并将需要暴露给外部的方法和属性作为返回值。通过这种方式，所有的代码都在函数的作用域内执行，不会直接污染全局命名空间。
+
+下面是一个简单的示例，演示了如何使用"window 工厂"模式创建一个隔离的 JavaScript 模块：
+
+```javascript
+var MyModule = (function () {
+  // 私有变量和方法
+  var privateVariable = '私有变量'
+
+  function privateMethod() {
+    console.log('私有方法')
+  }
+
+  // 暴露给外部的公共方法和属性
+  return {
+    publicMethod: function () {
+      console.log('公共方法')
+    },
+    publicVariable: '公共变量',
+  }
+})()
+
+// 使用公共方法和属性
+MyModule.publicMethod()
+console.log(MyModule.publicVariable)
+
+// 私有变量和方法不可访问
+console.log(MyModule.privateVariable) // undefined
+MyModule.privateMethod() // TypeError: MyModule.privateMethod is not a function
+```
+
+在上面的示例中，`MyModule`是一个立即执行函数，它返回一个对象，包含公共的方法和属性。私有的变量和方法则在函数内部定义，外部无法直接访问。
+
+通过使用"window 工厂"模式，可以有效地避免全局命名空间的污染和冲突，同时提供了一种封装和隔离代码的方式，提高了代码的可维护性和可重用性。
+
+## Vue 的 scoped 实现 css 隔离
+
+Vue 的 scoped 实现 CSS 隔离是通过给每个组件的根元素添加一个唯一的属性选择器，这个属性选择器是根据组件的唯一标识生成的。这样一来，组件的样式只会作用于组件内部的元素，不会影响到其他组件。
+
+具体实现步骤如下：
+
+1. 在 Vue 组件的 style 标签中添加 scoped 属性，例如：
+
+```html
+<style scoped>
+  .example {
+    color: red;
+  }
+</style>
+```
+
+2. Vue 编译器会自动将该组件的样式转换为带有唯一属性选择器的形式，例如：
+
+```html
+<style>
+  .example[data-v-xxxxxxx] {
+    color: red;
+  }
+</style>
+```
+
+其中，data-v-xxxxxxx 是根据组件的唯一标识生成的。
+
+3. 在组件的根元素上添加这个唯一属性选择器，例如：
+
+```html
+<template>
+  <div class="example"></div>
+</template>
+```
+
+编译后的结果为：
+
+```html
+<template>
+  <div class="example" data-v-xxxxxxx></div>
+</template>
+```
+
+这样，组件的样式就会被限制在带有唯一属性选择器的根元素内，不会影响到其他组件中的元素。这样做的好处是可以避免样式冲突，提高了组件的可维护性和复用性。
 
 ## 非对称加密
 
@@ -33,316 +176,3 @@
 7. 此时中间人就获得了会话秘钥，并取得双方新人，双方的通讯都可以由中间人代理
 
 出现这样问题的关键在第四步，客户端轻易信任了伪造的服务器证书
-
-## css
-
-### 颜色算法
-
-```css
-background-color: mix(@clr-main, #fff, 20%);
-```
-
-### 限制文字
-
-#### 单行
-
-```less
-overflow: hidden;
-text-overflow: ellipsis;
-white-space: nowrap;
-```
-
-#### 多行
-
-```less
-display: -webkit-box;
--webkit-box-orient: vertical;
--webkit-line-clamp: 2;
-overflow: hidden;
-```
-
-### input 框透明
-
-```plain
-                .ant-input-affix-wrapper {
-                    background-color: rgba(255, 255, 255, 0.28) !important;
-                    .ant-input {
-                        box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0) inset !important;
-                        background-color: rgba(255, 255, 255, 0) !important;
-                    }
-                    input:-internal-autofill-previewed,
-                    input:-internal-autofill-selected {
-                        background-color: rgba(255, 255, 255, 0) !important;
-                        transition: background-color 5000s ease-in-out 0s !important;
-                    }
-                }
-```
-
-### 删除滚动条
-
-```plain
-html ::-webkit-scrollbar {
-    width: 0px;
-    height: 0px;
-    background-color: transparent;
-}
-```
-
-### 从第二个元素开始
-
-```less
-.pieLegend:nth-child(n + 2) {
-  //n+2表示从第二个开始
-  border-top: 1px dashed rgba(51, 51, 51, 0.08);
-}
-```
-
-### 设置解析空格、\n、\t
-
-```css
-设置white-space
-normal  默认。空白会被浏览器忽略。
-pre   空白会被浏览器保留。其行为方式类似 HTML 中的
-<pre>标签。
-nowrap  文本不会换行，文本会在在同一行上继续，直到遇到<br>标签为止。
-pre-wrap  保留空白符序列，但是正常地进行换行。
-pre-line  合并空白符序列，但是保留换行符。
-inherit   规定应该从父元素继承 white-space 属性的值。
-```
-
-## JS
-
-### 打印文件流
-
-```javascript
-const blob = new Blob([res], {
-  type: 'application/pdf',
-})
-const fileName = `巡检报告.pdf`
-const link = document.createElement('a')
-// 新建一个a标签，用于下载,并设置下载地址,文件名为fileName
-link.href = window.URL.createObjectURL(blob)
-
-link.download = fileName
-document.body.appendChild(link)
-
-link.click()
-window.URL.revokeObjectURL(link.href)
-document.body.removeChild(link)
-```
-
-### token
-
-以下是使用 React 和 Express 实现登录加密 token 的一般步骤：
-
-1. 在 React 中，创建一个登录页面，该页面应该包含一个表单，用户可以在其中输入用户名和密码。当用户提交表单时，应该将这些凭据发送到 Express 服务器进行验证。
-2. 在 Express 中，创建一个路由处理程序，该处理程序将接收来自 React 的 POST 请求，并使用 Passport.js 库中的 LocalStrategy 进行身份验证。如果凭据有效，则应该生成一个 JWT 令牌并将其返回给 React。
-3. 在 React 中，通过将 JWT 令牌存储在本地存储中来保持用户会话。每次用户在 React 中进行受保护的操作时，应该将 JWT 令牌包含在请求中，以便 Express 服务器可以验证用户是否已经登录。
-4. 在 Express 中，创建一个中间件函数来验证 JWT 令牌。该函数应该用于任何需要身份验证的路由处理程序中，并且如果 JWT 令牌无效，则应该返回 401 未经授权的错误。
-
-下面是一个使用 React 和 Express 实现登录加密 token 的示例代码：
-
-React 代码：
-
-```javascript
-import React, { useState } from 'react'
-import axios from 'axios'
-
-function Login() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const response = await axios.post('/api/login', {
-      username,
-      password,
-    })
-    localStorage.setItem('token', response.data.token)
-    // redirect to protected page
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button type="submit">Login</button>
-    </form>
-  )
-}
-
-export default Login
-```
-
-Express 代码：
-
-```javascript
-const express = require('express')
-const bodyParser = require('body-parser')
-const passport = require('passport')
-const LocalStrategy = require('passport-local').Strategy
-const jwt = require('jsonwebtoken')
-
-const app = express()
-app.use(bodyParser.json())
-
-passport.use(
-  new LocalStrategy(async (username, password, done) => {
-    // validate username and password
-    if (username === 'admin' && password === 'password') {
-      const user = { id: 1, username: 'admin' }
-      done(null, user)
-    } else {
-      done(null, false)
-    }
-  })
-)
-
-app.post('/api/login', (req, res, next) => {
-  passport.authenticate(
-    'local',
-    { session: false },
-    async (err, user, info) => {
-      if (err || !user) {
-        return res.status(401).json({
-          message: 'Invalid credentials',
-        })
-      }
-      const token = jwt.sign({ id: user.id }, 'secret')
-      return res.json({ token })
-    }
-  )(req, res, next)
-})
-
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
-  if (token == null) {
-    return res.sendStatus(401)
-  }
-  jwt.verify(token, 'secret', (err, user) => {
-    if (err) {
-      return res.sendStatus(401)
-    }
-    req.user = user
-    next()
-  })
-}
-
-app.get('/api/protected', authenticateToken, (req, res) => {
-  res.json({ message: 'Protected page' })
-})
-
-app.listen(3000, () => {
-  console.log('Server started on port 3000')
-})
-```
-
-以上是一个简单的使用 React 和 Express 实现登录加密 token 的示例代码，该示例代码仅用于演示目的，实际应用中可能需要进行更多的安全性和错误处理。
-
-### 全屏
-
-```javascript
-const toFullScreen = (e) => {
-  const fullScreenEle = e.currentTarget.parentNode.parentNode.parentNode
-  // 如果是全屏状态，退出全屏
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
-    return
-  }
-  fullScreenEle.requestFullscreen()
-}
-```
-
-### 取色器
-
-```javascript
-const eyeDropper = new EyeDropper()
-const result = await eyeDropper.open()
-```
-
-### 页面可见度 API(Page Visibility)
-
-```jsx
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-  }
-})
-```
-
-### 获得响应流
-
-[使用可读流 - Web API 接口参考 | MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Using_readable_streams)
-
-<br/>
-
-### 移动端避免 click 和 touch 事件同时触发
-
-当我们在目标元素同时绑定 touchstart 和 click 事件时，在 touchstart 事件回调函数中使用该方法，可以阻止后续 click 事件的发生。
-
-<br/>
-
-## AntV
-
-### 柱状图
-
-##### 垂直坐标刻度长度
-
-```jsx
-yAxis:{
-    tickInterval:
-                Math.floor(
-                    Math.max(...usedRegistry.map((item) => item.itemNum)) /
-                        5 /
-                        10
-                ) * 10, //计算长度
-      // tickInterval:1,  //固定长度
-    grid:null
-}
-```
-
-##### 限制柱子宽度
-
-```jsx
-maxColumnWidth: 50,
-```
-
-##### 柱状图中 tooltip 以 name：value 格式展示
-
-```plain
-xField: 'itemName',
-yField: 'itemNum',
-seriesField: 'itemName',
-tooltip: {
-    showTitle:false
-},
-legend: false,
-```
-
-### tooltip
-
-##### 不显示标题
-
-```plain
-tooltip: {
-    showTitle:false
-  },
-```
-
-### legend
-
-##### 不显示图例
-
-```plain
-legend: false,
-```
